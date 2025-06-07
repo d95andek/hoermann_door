@@ -1,0 +1,143 @@
+# These substitutions allow the end user to override certain values
+substitutions:
+  name: "e3-h"
+  friendly_name: "E3 H PIC16"
+  state: "Tillstånd"
+  opening: "Öppnar"
+  closing: "Stänger"
+  open: "Öppen"
+  closed: "Stängd"
+  stopped: "Stoppad"
+  venting: "Ventilerar"
+  error: "Fel"
+  pic16_com: "PIC16 Communication"
+  relay_state: "Relätillstånd"
+  got_valid_broadcast: "Giltigt tillstånd mottaget" 
+  error_state: "Feltillstånd" 
+  prewarn_state: "Förvarningstillstånd" 
+  light: "${friendly_name} Belysning"
+  sw_vent: "${friendly_name} Ventilerar" 
+  sw_light: "Switch Light" 
+  btn_vent: "${friendly_name} Ventilera" 
+  btn_impulse: "${friendly_name} Impuls" 
+
+esphome:
+  name: "${name}"
+  friendly_name: "${friendly_name}"
+
+esp8266:
+  board: esp01_1m
+
+external_components:
+    - source: github://d95andek/hoermann_door
+      refresh: 0s
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+  use_address: e3-pic16.local #Remove after first update
+  ap:
+    password: !secret fallback_ap_password
+
+api:
+  encryption:
+    key: !secret api_key_e3_supra_h_pic16
+  
+ota:  
+  - platform: esphome
+    password: !secret ota_e3_h_password
+
+logger:
+  level: WARN
+  esp8266_store_log_strings_in_flash: False
+  baud_rate: 0 # Disable Serial logging to avoid conflict with uart bus on UART0
+
+uart:
+  id: uart_bus
+  tx_pin: GPIO15
+  rx_pin: GPIO13
+  baud_rate: 19200
+
+uapbridge_pic16:
+  id: garage_door_comp
+  uart_id: uart_bus
+  pic16_version: 2 #starting from V2 the Emergency stop gets replaced with a soft stop
+
+cover:
+  - platform: uapbridge
+    name: ${friendly_name}
+    device_class: garage
+
+switch:
+  - platform: uapbridge
+    venting_switch:
+      id: venting_switch
+      name: "${sw_vent}"
+#uncomment if you want to use the switch insteat of the light component for light
+#    light_switch:
+#      id: light_switch
+#      name: "${sw_light}"
+
+binary_sensor:
+  - platform: uapbridge
+    pic16_com:
+      name: "${pic16_com}"
+    relay_state:
+      name: "${relay_state}"
+    error_state:
+      name: "${error_state}"
+    prewarn_state:
+      name: "${prewarn_state}"
+    got_valid_broadcast:
+      name: "${got_valid_broadcast}"
+
+output:
+  - platform: uapbridge
+    id: gd_light
+
+light:
+  - platform: uapbridge
+    id: my_light
+    name: "${light}"
+    output: gd_light
+
+text_sensor:
+  - platform: uapbridge
+    id: garage_door_state
+    name: "${state}"
+    #uncomment the line for custom text
+#    filters:
+#      - substitute:
+#        - "Opening -> ${opening}"
+#        - "Closing -> ${closing}"
+#        - "Open -> ${open}"
+#        - "Closed -> ${closed}"
+#        - "Stopped -> ${stopped}"
+#        - "Venting -> ${venting}"
+#        - "Error -> ${error}"
+
+button:
+  - platform: uapbridge
+    vent_button:
+      id: button_vent
+      name: "${btn_vent}"
+    impulse_button: #is only implemented in PIC16 V2 firmware
+      id: button_impulse
+      name: "${btn_impulse}"
+
+#optional BME Sensor
+#i2c:
+#  - id: bus_1
+#    sda: SDA
+#    scl: SCL
+#    scan: true
+#sensor:
+#  - platform: bme280_i2c
+#    temperature:
+#      name: "BME280 Temperature"
+#    pressure:
+#      name: "BME280 Pressure"
+#    humidity:
+#      name: "BME280 Humidity"
+#    address: 0x76
+#    update_interval: 10min
