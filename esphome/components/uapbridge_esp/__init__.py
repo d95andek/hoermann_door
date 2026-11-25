@@ -1,22 +1,26 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import uart
-from ..uapbridge import to_code_base, CONFIG_SCHEMA_BASE, UAPBridge
+from ..uapbridge import to_code_base, CONFIG_SCHEMA_BASE, UAPBridge, validate_min_esphome_version
 from esphome.const import CONF_ID
 
 AUTO_LOAD = ["uapbridge"]
 MULTI_CONF = True
+CONF_BUS_TIMEOUT = "bus_timeout"
 
 # Create UAPBridge_esp namespace
 uapbridge_esp_ns = cg.esphome_ns.namespace("uapbridge_esp")
 UAPBridge_esp = uapbridge_esp_ns.class_("UAPBridge_esp", UAPBridge)
 
 CONFIG_SCHEMA = cv.All(
+    validate_min_esphome_version,
     CONFIG_SCHEMA_BASE.extend(
         {
             cv.GenerateID(): cv.declare_id(UAPBridge_esp),
+            # no valid broadcast for this long --> door state is reported as unknown
+            cv.Optional(CONF_BUS_TIMEOUT, default="60s"): cv.positive_time_period_milliseconds,
         }
-    ).add_extra(cv.only_with_esp_idf)
+    ).add_extra(cv.only_on_esp32)
 )
 
 FINAL_VALIDATE_SCHEMA = uart.final_validate_device_schema(
@@ -30,3 +34,4 @@ async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
     await to_code_base(var, config)
     await uart.register_uart_device(var, config)
+    cg.add(var.set_bus_timeout(config[CONF_BUS_TIMEOUT]))
