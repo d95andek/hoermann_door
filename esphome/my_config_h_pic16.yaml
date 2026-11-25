@@ -44,11 +44,10 @@ api:
   
 ota:  
   - platform: esphome
-    password: !secret ota_e3_h_password
+    encryption:
 
 logger:
   level: WARN
-  esp8266_store_log_strings_in_flash: False
   baud_rate: 0 # Disable Serial logging to avoid conflict with uart bus on UART0
 
 uart:
